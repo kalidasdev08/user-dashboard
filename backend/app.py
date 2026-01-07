@@ -4,12 +4,10 @@ import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt, datetime
 from functools import wraps
-import os
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
 
 # ---------------- APP CONFIG ----------------
 app = Flask(__name__)
-
+app.config["SECRET_KEY"] = "super-secret-key"
 
 CORS(
     app,
@@ -223,6 +221,4 @@ def delete_employee(id):
 init_db()
 
 if __name__ == "__main__":
-    app.run()
-
-
+    app.run(debug=True, use_reloader=False)
