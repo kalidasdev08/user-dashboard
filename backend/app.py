@@ -12,15 +12,11 @@ app.config["SECRET_KEY"] = "super-secret-key"
 # ✅ CORRECT CORS CONFIG (NO TRAILING SLASH)
 CORS(
     app,
-    resources={r"/*": {
-        "origins": [
-            "http://localhost:5173",
-            "https://user-dashboard-xi-beryl.vercel.app"
-        ]
-    }},
-    supports_credentials=True
+    resources={r"/*": {"origins": "https://user-dashboard-xi-beryl.vercel.app"}},
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
-
 # ✅ HANDLE PREFLIGHT (CRITICAL FIX)
 @app.before_request
 def handle_preflight():
