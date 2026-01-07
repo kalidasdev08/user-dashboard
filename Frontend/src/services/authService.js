@@ -1,4 +1,4 @@
-const API = "http://127.0.0.1:5000";
+const API = import.meta.env.VITE_API_URL;
 
 // -------- DASHBOARD --------
 export async function getDashboard() {
@@ -17,13 +17,13 @@ export async function login(email, password) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-
+  const data = await res.json();
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.error || "Login failed");
   }
 
-  const data = await res.json();
+
   localStorage.setItem("token", data.token);
 }
 

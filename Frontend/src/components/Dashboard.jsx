@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { getToken, logout } from "../services/authService";
-const API = "http://127.0.0.1:5000";
+const API = import.meta.env.VITE_API_URL;
 
 export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
@@ -26,22 +26,29 @@ export default function Dashboard() {
   const fetchEmployees = async () => {
     setLoading(true);
     setError("");
-
+  
+    const token = getToken();
+  
+    if (!token) {
+      setError("Authentication required");
+      return;
+    }
+  
     try {
-      const params = new URLSearchParams({
-        page,
-        limit,
-        search,
-        level,
-      });
-
+      const params = new URLSearchParams({ page, limit, search, level });
+  
       const res = await fetch(`${API}/employees?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-
-      if (!res.ok) throw new Error("Failed to fetch employees");
-
+  
       const data = await res.json();
+  
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to fetch employees");
+      }
+  
       setEmployees(data.data);
       setTotal(data.total);
     } catch (err) {
@@ -50,7 +57,7 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchEmployees();
   }, [page, search, level]);
@@ -58,7 +65,14 @@ export default function Dashboard() {
   // ---------------- ADD EMPLOYEE ----------------
   const addEmployee = async (e) => {
     e.preventDefault();
-
+  
+    const token = getToken();
+  
+    if (!token) {
+      alert("Token missing. Please login again.");
+      return;
+    }
+  
     try {
       const res = await fetch(`${API}/employees`, {
         method: "POST",
@@ -68,18 +82,20 @@ export default function Dashboard() {
         },
         body: JSON.stringify(form),
       });
-
+  
+      const data = await res.json();
+  
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to add employee");
+        throw new Error(data.error || "Failed to add employee");
       }
-
+  
       setForm({ name: "", email: "", company: "", level: "junior" });
       fetchEmployees();
     } catch (err) {
       alert(err.message);
     }
   };
+  
 
   // ---------------- DELETE EMPLOYEE ----------------
   const deleteEmployee = async (id) => {
