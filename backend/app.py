@@ -11,7 +11,7 @@ app.config["SECRET_KEY"] = "super-secret-key"
 
 CORS(
     app,
-    resources={r"/*": {"origins": "http://localhost:5173"}},
+    resources={r"/*": {"origins": "https://user-dashboard-xi-beryl.vercel.app/"}},
     supports_credentials=True,
     allow_headers=["Content-Type", "Authorization"],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
