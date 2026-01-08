@@ -1,13 +1,14 @@
 const API = import.meta.env.VITE_API_URL;
 
-// -------- DASHBOARD --------
-export async function getDashboard() {
-  const token = getToken();
-  const res = await fetch(`${API}/dashboard`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Failed to fetch dashboard");
-  return res.json();
+// -------- GET TOKEN --------
+export function getToken() {
+  return localStorage.getItem("token");
+}
+
+// -------- LOGOUT --------
+export function logout() {
+  localStorage.removeItem("token");
+  window.location.reload();
 }
 
 // -------- LOGIN --------
@@ -17,14 +18,14 @@ export async function login(email, password) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  const data = await res.json();
+
+  const data = await res.json(); // ✅ parse once
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Login failed");
+    throw new Error(data.error || "Login failed");
   }
 
-
   localStorage.setItem("token", data.token);
+  return data;
 }
 
 // -------- REGISTER --------
@@ -35,22 +36,25 @@ export async function register(email, password) {
     body: JSON.stringify({ email, password }),
   });
 
+  const data = await res.json(); // ✅ parse once
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Registration failed");
+    throw new Error(data.error || "Registration failed");
   }
 
-  const data = await res.json();
   return data;
 }
 
-// -------- LOGOUT --------
-export function logout() {
-  localStorage.removeItem("token");
-  window.location.reload(); // optional: redirect to login page
-}
+// -------- DASHBOARD --------
+export async function getDashboard() {
+  const token = getToken();
+  const res = await fetch(`${API}/dashboard`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
-// -------- GET TOKEN --------
-export function getToken() {
-  return localStorage.getItem("token");
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to fetch dashboard");
+  }
+
+  return data;
 }

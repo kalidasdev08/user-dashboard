@@ -1,5 +1,4 @@
 import { getToken } from "./authService";
-
 const API = import.meta.env.VITE_API_URL;
 
 export const addEmployee = async (data) => {
@@ -14,10 +13,26 @@ export const addEmployee = async (data) => {
     body: JSON.stringify(data),
   });
 
+  const result = await res.json(); // ✅ parse once
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to add employee");
+    throw new Error(result.error || "Failed to add employee");
   }
 
-  return res.json();
+  return result;
+};
+
+export const getEmployees = async (params) => {
+  const token = getToken();
+  const query = new URLSearchParams(params);
+
+  const res = await fetch(`${API}/employees?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const result = await res.json();
+  if (!res.ok) {
+    throw new Error(result.error || "Failed to fetch employees");
+  }
+
+  return result;
 };

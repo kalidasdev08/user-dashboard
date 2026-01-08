@@ -22,101 +22,109 @@ export default function Dashboard() {
 
   const token = getToken();
 
-  // ---------------- FETCH EMPLOYEES ----------------
-  const fetchEmployees = async () => {
-    setLoading(true);
-    setError("");
-  
-    const token = getToken();
-  
-    if (!token) {
-      setError("Authentication required");
-      return;
-    }
-  
+// ---------------- FETCH EMPLOYEES ----------------
+const fetchEmployees = async () => {
+  setLoading(true);
+  setError("");
+
+  const token = getToken();
+  if (!token) {
+    setError("Authentication required");
+    setLoading(false);
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams({ page, limit, search, level });
+    const res = await fetch(`${API}/employees?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    // ✅ parse JSON once
+    let data;
     try {
-      const params = new URLSearchParams({ page, limit, search, level });
-  
-      const res = await fetch(`${API}/employees?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-  
-      const data = await res.json();
-  
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to fetch employees");
-      }
-  
-      setEmployees(data.data);
-      setTotal(data.total);
+      data = await res.json();
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      throw new Error("Invalid response from server");
     }
-  };
-  
-  useEffect(() => {
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to fetch employees");
+    }
+
+    setEmployees(data.data);
+    setTotal(data.total);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// ---------------- ADD EMPLOYEE ----------------
+const addEmployee = async (e) => {
+  e.preventDefault();
+
+  const token = getToken();
+  if (!token) {
+    alert("Token missing. Please login again.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/employees`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(form),
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (err) {
+      throw new Error("Invalid response from server");
+    }
+
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to add employee");
+    }
+
+    setForm({ name: "", email: "", company: "", level: "junior" });
     fetchEmployees();
-  }, [page, search, level]);
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
-  // ---------------- ADD EMPLOYEE ----------------
-  const addEmployee = async (e) => {
-    e.preventDefault();
-  
-    const token = getToken();
-  
-    if (!token) {
-      alert("Token missing. Please login again.");
-      return;
-    }
-  
+// ---------------- DELETE EMPLOYEE ----------------
+const deleteEmployee = async (id) => {
+  if (!window.confirm("Delete this employee?")) return;
+
+  try {
+    const res = await fetch(`${API}/employees/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    let data;
     try {
-      const res = await fetch(`${API}/employees`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-  
-      const data = await res.json();
-  
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to add employee");
-      }
-  
-      setForm({ name: "", email: "", company: "", level: "junior" });
-      fetchEmployees();
+      data = await res.json();
     } catch (err) {
-      alert(err.message);
+      throw new Error("Invalid response from server");
     }
-  };
-  
 
-  // ---------------- DELETE EMPLOYEE ----------------
-  const deleteEmployee = async (id) => {
-    if (!window.confirm("Delete this employee?")) return;
-
-    try {
-      const res = await fetch(`${API}/employees/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to delete employee");
-      }
-
-      fetchEmployees();
-    } catch (err) {
-      alert(err.message);
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to delete employee");
     }
-  };
+
+    fetchEmployees();
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
   // ---------------- PAGINATION ----------------
   const totalPages = Math.ceil(total / limit) || 1;
