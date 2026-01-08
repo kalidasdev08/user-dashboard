@@ -12,10 +12,8 @@ app.config["SECRET_KEY"] = "super-secret-key"
 # ✅ CORRECT CORS CONFIG
 CORS(
     app,
-    resources={r"/*": {"origins": "https://user-dashboard-xi-beryl.vercel.app"}},
+    resources={r"/*": {"origins": "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app"}},
     supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
 
 # ✅ HANDLE PREFLIGHT (CRITICAL FIX)
