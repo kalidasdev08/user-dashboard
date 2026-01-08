@@ -9,7 +9,7 @@ from functools import wraps
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "super-secret-key"
 
-# ✅ CORRECT CORS CONFIG (NO TRAILING SLASH)
+# ✅ CORRECT CORS CONFIG
 CORS(
     app,
     resources={r"/*": {"origins": "https://user-dashboard-xi-beryl.vercel.app"}},
@@ -17,6 +17,7 @@ CORS(
     allow_headers=["Content-Type", "Authorization"],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
+
 # ✅ HANDLE PREFLIGHT (CRITICAL FIX)
 @app.before_request
 def handle_preflight():
@@ -47,7 +48,6 @@ def get_db():
 # ---------------- INIT DATABASE ----------------
 def init_db():
     conn = get_db()
-
     conn.execute("""
         CREATE TABLE IF NOT EXISTS auth_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,7 +55,6 @@ def init_db():
             password TEXT
         )
     """)
-
     conn.execute("""
         CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,12 +66,10 @@ def init_db():
             FOREIGN KEY(user_id) REFERENCES auth_users(id)
         )
     """)
-
     conn.execute(
         "INSERT OR IGNORE INTO auth_users (email, password) VALUES (?, ?)",
         ("admin@test.com", generate_password_hash("1234"))
     )
-
     conn.commit()
     conn.close()
 
@@ -171,6 +168,7 @@ def employees():
     conn = get_db()
     user_id = request.user["user_id"]
 
+    # Add Employee
     if request.method == "POST":
         data = request.json
         name = data.get("name")
@@ -190,6 +188,7 @@ def employees():
         conn.close()
         return jsonify({"message": "Employee added"}), 201
 
+    # Get Employees
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 5))
     search = request.args.get("search", "")
@@ -223,6 +222,28 @@ def employees():
         "total": total,
         "page": page
     })
+
+# ---------------- DELETE EMPLOYEE ----------------
+@app.route("/employees/<int:emp_id>", methods=["DELETE"])
+@token_required
+def delete_employee(emp_id):
+    conn = get_db()
+    user_id = request.user["user_id"]
+
+    emp = conn.execute(
+        "SELECT * FROM employees WHERE id=? AND user_id=?",
+        (emp_id, user_id)
+    ).fetchone()
+
+    if not emp:
+        conn.close()
+        return jsonify({"error": "Employee not found"}), 404
+
+    conn.execute("DELETE FROM employees WHERE id=? AND user_id=?", (emp_id, user_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Employee deleted"}), 200
 
 # ---------------- RUN ----------------
 init_db()
