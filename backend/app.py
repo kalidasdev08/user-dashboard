@@ -12,19 +12,37 @@ app.config["SECRET_KEY"] = "super-secret-key"
 # ✅ CORS (Vercel frontend)
 CORS(
     app,
-    resources={r"/*": {"origins": "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app"}},
+    resources={r"/*": {
+        "origins": [
+            "http://localhost:5173",
+            "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app"
+        ]
+    }},
     supports_credentials=True,
 )
+
 
 # ---------------- PREFLIGHT FIX ----------------
 @app.before_request
 def handle_preflight():
     if request.method == "OPTIONS":
-        response = jsonify({"message": "preflight ok"})
-        response.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin"))
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
-        response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-        return response
+        origin = request.headers.get("Origin")
+        if origin in [
+            "http://localhost:5173",
+            "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app"
+        ]:
+            response = jsonify({"message": "preflight ok"})
+            response.headers.add("Access-Control-Allow-Origin", origin)
+            response.headers.add(
+                "Access-Control-Allow-Headers",
+                "Content-Type,Authorization"
+            )
+            response.headers.add(
+                "Access-Control-Allow-Methods",
+                "GET,POST,PUT,DELETE,OPTIONS"
+            )
+            return response
+
 
 DB = "database.db"
 
