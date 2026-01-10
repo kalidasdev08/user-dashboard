@@ -15,7 +15,8 @@ CORS(
     resources={r"/*": {
         "origins": [
             "http://localhost:5173",
-            "https://user-dashboard-3kml0yque-kalidasdev08s-projects.vercel.app/"
+            "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app",
+            "https://user-dashboard-3kml0yque-kalidasdev08s-projects.vercel.app"
         ]
     }},
     supports_credentials=True,
@@ -27,20 +28,18 @@ CORS(
 def handle_preflight():
     if request.method == "OPTIONS":
         origin = request.headers.get("Origin")
-        if origin in [
+
+        allowed_origins = [
             "http://localhost:5173",
-            "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app"
-        ]:
+            "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app",
+            "https://user-dashboard-3kml0yque-kalidasdev08s-projects.vercel.app"
+        ]
+
+        if origin in allowed_origins:
             response = jsonify({"message": "preflight ok"})
-            response.headers.add("Access-Control-Allow-Origin", origin)
-            response.headers.add(
-                "Access-Control-Allow-Headers",
-                "Content-Type,Authorization"
-            )
-            response.headers.add(
-                "Access-Control-Allow-Methods",
-                "GET,POST,PUT,DELETE,OPTIONS"
-            )
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+            response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
             return response
 
 
