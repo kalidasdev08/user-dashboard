@@ -15,7 +15,7 @@ CORS(
     resources={r"/*": {
         "origins": [
             "http://localhost:5173",
-            "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app"
+            "https://user-dashboard-3kml0yque-kalidasdev08s-projects.vercel.app/"
         ]
     }},
     supports_credentials=True,
