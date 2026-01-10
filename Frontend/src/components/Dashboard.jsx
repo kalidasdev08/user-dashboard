@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getToken, logout } from "../services/authService";
+
 const API = import.meta.env.VITE_API_URL;
 
 export default function Dashboard() {
@@ -12,6 +13,17 @@ export default function Dashboard() {
   const [page, setPage] = useState(1);
   const limit = 5;
   const [total, setTotal] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(search);
+    setPage(1);
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [search]);
+
 
   const [form, setForm] = useState({
     name: "",
@@ -20,56 +32,53 @@ export default function Dashboard() {
     level: "junior",
   });
 
-  const token = getToken();
+
 
 // ---------------- FETCH EMPLOYEES ----------------
 const fetchEmployees = async () => {
-  setLoading(true);
-  setError("");
-
   const token = getToken();
   if (!token) {
     setError("Authentication required");
-    setLoading(false);
     return;
   }
 
+  setLoading(true);
+  setError("");
+
   try {
-    const params = new URLSearchParams({ page, limit, search, level });
+    const params = new URLSearchParams({
+      page,
+      limit,
+      search,
+      level,
+    });
+
     const res = await fetch(`${API}/employees?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    // ✅ parse JSON once
-    let data;
-    try {
-      data = await res.json();
-    } catch (err) {
-      throw new Error("Invalid response from server");
-    }
+    const data = await res.json();
 
     if (!res.ok) {
       throw new Error(data.error || "Failed to fetch employees");
     }
 
-    setEmployees(data.data);
-    setTotal(data.total);
+    setEmployees(data.data || []);
+    setTotal(data.total || 0);
   } catch (err) {
     setError(err.message);
   } finally {
     setLoading(false);
   }
 };
+useEffect(() => {
+  fetchEmployees();
+}, [page, search, level]);
 
 // ---------------- ADD EMPLOYEE ----------------
 const addEmployee = async (e) => {
   e.preventDefault();
-
   const token = getToken();
-  if (!token) {
-    alert("Token missing. Please login again.");
-    return;
-  }
 
   try {
     const res = await fetch(`${API}/employees`, {
@@ -81,18 +90,11 @@ const addEmployee = async (e) => {
       body: JSON.stringify(form),
     });
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (err) {
-      throw new Error("Invalid response from server");
-    }
-
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to add employee");
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
 
     setForm({ name: "", email: "", company: "", level: "junior" });
+    setPage(1); // ✅ reset pagination
     fetchEmployees();
   } catch (err) {
     alert(err.message);
@@ -106,19 +108,11 @@ const deleteEmployee = async (id) => {
   try {
     const res = await fetch(`${API}/employees/${id}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${getToken()}` },
     });
 
-    let data;
-    try {
-      data = await res.json();
-    } catch (err) {
-      throw new Error("Invalid response from server");
-    }
-
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to delete employee");
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
 
     fetchEmployees();
   } catch (err) {
@@ -127,7 +121,7 @@ const deleteEmployee = async (id) => {
 };
 
   // ---------------- PAGINATION ----------------
-  const totalPages = Math.ceil(total / limit) || 1;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
     <div style={{
@@ -305,7 +299,7 @@ const deleteEmployee = async (id) => {
         }}>
           <input
             placeholder="Search by name, email, company..."
-            value={search}
+            value={debouncedSearch}
             onChange={(e) => setSearch(e.target.value)}
             style={{
               flex: "1",
