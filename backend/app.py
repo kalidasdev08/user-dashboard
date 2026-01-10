@@ -9,30 +9,21 @@ from functools import wraps
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "super-secret-key"
 
-# ✅ CORRECT CORS CONFIG
+# ✅ CORS (Vercel frontend)
 CORS(
     app,
     resources={r"/*": {"origins": "https://user-dashboard-bfaoau3ew-kalidasdev08s-projects.vercel.app"}},
     supports_credentials=True,
 )
 
-# ✅ HANDLE PREFLIGHT (CRITICAL FIX)
+# ---------------- PREFLIGHT FIX ----------------
 @app.before_request
 def handle_preflight():
     if request.method == "OPTIONS":
         response = jsonify({"message": "preflight ok"})
-        response.headers.add(
-            "Access-Control-Allow-Origin",
-            request.headers.get("Origin")
-        )
-        response.headers.add(
-            "Access-Control-Allow-Headers",
-            "Content-Type,Authorization"
-        )
-        response.headers.add(
-            "Access-Control-Allow-Methods",
-            "GET,POST,PUT,DELETE,OPTIONS"
-        )
+        response.headers.add("Access-Control-Allow-Origin", request.headers.get("Origin"))
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
         return response
 
 DB = "database.db"
@@ -46,6 +37,7 @@ def get_db():
 # ---------------- INIT DATABASE ----------------
 def init_db():
     conn = get_db()
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS auth_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +45,7 @@ def init_db():
             password TEXT
         )
     """)
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,14 +53,16 @@ def init_db():
             name TEXT NOT NULL,
             email TEXT NOT NULL,
             company TEXT,
-            level TEXT CHECK(level IN ('junior', 'senior')),
+            level TEXT CHECK(level IN ('junior','senior')),
             FOREIGN KEY(user_id) REFERENCES auth_users(id)
         )
     """)
+
     conn.execute(
         "INSERT OR IGNORE INTO auth_users (email, password) VALUES (?, ?)",
         ("admin@test.com", generate_password_hash("1234"))
     )
+
     conn.commit()
     conn.close()
 
@@ -78,6 +73,7 @@ def token_required(f):
         auth = request.headers.get("Authorization")
         if not auth:
             return jsonify({"error": "Token missing"}), 401
+
         try:
             token = auth.split(" ")[1]
             payload = jwt.decode(
@@ -88,15 +84,13 @@ def token_required(f):
             request.user = payload
         except:
             return jsonify({"error": "Invalid or expired token"}), 401
+
         return f(*args, **kwargs)
     return decorated
 
 # ---------------- REGISTER ----------------
 @app.route("/register", methods=["POST"])
 def register():
-    if not request.is_json:
-        return jsonify({"error": "JSON required"}), 415
-
     data = request.json
     email = data.get("email")
     password = data.get("password")
@@ -121,9 +115,6 @@ def register():
 # ---------------- LOGIN ----------------
 @app.route("/login", methods=["POST"])
 def login():
-    if not request.is_json:
-        return jsonify({"error": "JSON required"}), 415
-
     data = request.json
     email = data.get("email")
     password = data.get("password")
@@ -150,29 +141,21 @@ def login():
 
     return jsonify({"token": token}), 200
 
-# ---------------- DASHBOARD ----------------
-@app.route("/dashboard", methods=["GET"])
-@token_required
-def dashboard():
-    return jsonify({
-        "message": f"Welcome {request.user['email']}",
-        "user_id": request.user["user_id"]
-    })
-
-# ---------------- EMPLOYEES ----------------
+# ---------------- EMPLOYEES (SEARCH + FILTER + PAGINATION) ----------------
 @app.route("/employees", methods=["GET", "POST"])
 @token_required
 def employees():
     conn = get_db()
     user_id = request.user["user_id"]
 
-    # Add Employee
+    # ---------- ADD EMPLOYEE ----------
     if request.method == "POST":
         data = request.json
+
         name = data.get("name")
         email = data.get("email")
         company = data.get("company")
-        level = data.get("level")
+        level = data.get("level", "").lower()   # ✅ FIX
 
         if not name or not email or not level:
             conn.close()
@@ -186,11 +169,11 @@ def employees():
         conn.close()
         return jsonify({"message": "Employee added"}), 201
 
-    # Get Employees
+    # ---------- GET EMPLOYEES ----------
     page = int(request.args.get("page", 1))
     limit = int(request.args.get("limit", 5))
     search = request.args.get("search", "")
-    level_filter = request.args.get("level", "")
+    level_filter = request.args.get("level", "").lower()  # ✅ FIX
     offset = (page - 1) * limit
 
     query = "SELECT * FROM employees WHERE user_id=?"
@@ -237,7 +220,10 @@ def delete_employee(emp_id):
         conn.close()
         return jsonify({"error": "Employee not found"}), 404
 
-    conn.execute("DELETE FROM employees WHERE id=? AND user_id=?", (emp_id, user_id))
+    conn.execute(
+        "DELETE FROM employees WHERE id=? AND user_id=?",
+        (emp_id, user_id)
+    )
     conn.commit()
     conn.close()
 
